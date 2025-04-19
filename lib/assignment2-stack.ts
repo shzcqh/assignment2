@@ -44,6 +44,25 @@ const uploadsQueue = new sqs.Queue(this, 'UploadsQueue', {
       TABLE_NAME: imagesTable.tableName,
     },
   });
+  /* ---------- RemoveImage Lambda ---------- */
+const removeImageFn = new lambdaNode.NodejsFunction(this, 'RemoveImageFn', {
+  entry: path.join(__dirname, 'lambdas', 'remove-image.ts'),
+  runtime: lambda.Runtime.NODEJS_18_X,
+  environment: {
+    BUCKET_NAME: photosBucket.bucketName,
+  },
+});
+
+// Remove permissions
+photosBucket.grantDelete(removeImageFn);
+
+// Bind a DLQ event source
+removeImageFn.addEventSource(
+  new lambdaEvent.SqsEventSource(badMessagesQueue, {
+    batchSize: 1,
+  }),
+);
+
     //Let Lambda write DynamoDB
     imagesTable.grantWriteData(logImageFn);
 
