@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';   //S3 - > SQS notifications
 import * as sns   from 'aws-cdk-lib/aws-sns';
 import * as subs  from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as iam from 'aws-cdk-lib/aws-iam';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class Assignment2Stack extends cdk.Stack {
@@ -66,6 +67,28 @@ const addMetadataFn = new lambdaNode.NodejsFunction(this, 'AddMetadataFn', {
   },
 });
 imagesTable.grantWriteData(addMetadataFn);
+/* ---------- UpdateStatus Lambda ---------- */
+const updateStatusFn = new lambdaNode.NodejsFunction(this, 'UpdateStatusFn', {
+  entry: path.join(__dirname, 'lambdas', 'update-status.ts'),
+  runtime: lambda.Runtime.NODEJS_18_X,
+  environment: {
+    TABLE_NAME: imagesTable.tableName,
+    SES_SOURCE: '20109117@mail.wit.ie',     
+    NOTIFY_EMAIL: '20109117@mail.wit.ie'    
+  },
+});
+imagesTable.grantWriteData(updateStatusFn);
+
+/* Emails are allowed */
+updateStatusFn.addToRolePolicy(new iam.PolicyStatement({
+  actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+  resources: ['*'],
+}));
+
+/* Subscribe to Topic (it's okay to not filter it, because AddMetadata has already blocked metadata_type) */
+photosTopic.addSubscription(
+  new subs.LambdaSubscription(updateStatusFn)
+);
 
 /* ---------- SNS Subscription (with Filtering) ---------- */
 photosTopic.addSubscription(
