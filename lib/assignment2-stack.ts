@@ -8,6 +8,8 @@ import * as lambdaNode from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambdaEvent from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as path from 'path';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';   //S3 - > SQS notifications
+import * as sns   from 'aws-cdk-lib/aws-sns';
+import * as subs  from 'aws-cdk-lib/aws-sns-subscriptions';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class Assignment2Stack extends cdk.Stack {
@@ -52,6 +54,32 @@ const removeImageFn = new lambdaNode.NodejsFunction(this, 'RemoveImageFn', {
     BUCKET_NAME: photosBucket.bucketName,
   },
 });
+/* ---------- SNS Topic ---------- */
+const photosTopic = new sns.Topic(this, 'PhotosTopic');
+
+/* ---------- AddMetadata Lambda ---------- */
+const addMetadataFn = new lambdaNode.NodejsFunction(this, 'AddMetadataFn', {
+  entry: path.join(__dirname, 'lambdas', 'add-metadata.ts'),
+  runtime: lambda.Runtime.NODEJS_18_X,
+  environment: {
+    TABLE_NAME: imagesTable.tableName,
+  },
+});
+imagesTable.grantWriteData(addMetadataFn);
+
+/* ---------- SNS Subscription (with Filtering) ---------- */
+photosTopic.addSubscription(
+  new subs.LambdaSubscription(addMetadataFn, {
+    filterPolicy: {
+      metadata_type: sns.SubscriptionFilter.stringFilter({
+        allowlist: ['Caption', 'Date', 'Name'],
+      }),
+    },
+  }),
+);
+
+/* ---------- Output Topic ARN ---------- */
+new cdk.CfnOutput(this, 'TopicArn', { value: photosTopic.topicArn });
 
 // Remove permissions
 photosBucket.grantDelete(removeImageFn);
