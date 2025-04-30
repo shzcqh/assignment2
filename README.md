@@ -1,42 +1,40 @@
-# Assignment 2 – Event-Driven Photo Gallery
+## Distributed Systems – Event-Driven Photo-Gallery (AWS CDK)
 
-**Student:** 20109117 – Huaze Shao  
-**Course:** Distributed Systems  
-**Submission:** Private GitHub repo (will be made public after deadline)
+|                         |                                                         |
+|-------------------------|---------------------------------------------------------|
+| **Name / Student ID**   | **Huaze Shao (20109117)**                               |
+| **Demo Video**          | <https://youtu.be/IcHTiSoSIFo>                          |
+| **Repository URL**      | <https://github.com/shzcqh/assignment2>                 |
 
----
+This project implements a **serverless, event-driven photo-gallery backend** on AWS.  
+Core services—**S3 → SQS → Lambda (+ DynamoDB, SES)**—are provisioned with AWS CDK (TypeScript), forming a complete upload-moderation-notification pipeline.
 
-## 📖 Project Overview
-
-This project implements a simple photo-gallery backend on AWS using an Event-Driven Architecture and CDK:
-
-1. **Photographer** uploads images (.jpeg/.png) → recorded in DynamoDB  
-2. **Photographer** sends metadata (Caption, Date, Name) via SNS → DynamoDB fields updated  
-3. **Invalid uploads** (other extensions) automatically removed via SQS DLQ + Lambda  
-4. **Moderator** submits Pass/Reject status via SNS → DynamoDB updated + email sent via SES  
-
-![Architecture Diagram](./architecture.png)  
-*(Place your architecture diagram here.)*
+![High-level Architecture](./images/arch.png)
 
 ---
 
-## 🔧 Prerequisites
+### 🗂️ Repository Layout
 
-- AWS account in **eu-west-1**  
-- AWS CLI configured (`aws configure`)  
-- Docker or local esbuild (`npm install -D esbuild` + `export AWSCDK_DISABLE_DOCKER=1`)  
-- SES: verified email `20109117@mail.wit.ie` (source & recipient)
+| Path / folder | Purpose |
+|---------------|---------|
+| `cdk/`        | CDK stacks – S3 bucket, SQS queues, Lambda functions, DynamoDB table, SES setup |
+| `lambdas/`    | All Lambda handlers (`photographer*`, `moderator*`, `mailer*`) |
+| `images/`     | Architecture PNGs / diagrams |
+| `scripts/`    | Local helper scripts (e.g. mass-upload test images) |
+| `README.md`   | **Project description (this file)** |
 
 ---
 
-## 🚀 Deployment
+### 🚀 Deploy & Run
+
+> Requirements: Node ≥ 18, AWS CLI configured, CDK v2 installed (`npm i -g aws-cdk`).
 
 ```bash
-# 1. Install dependencies
+# install dependencies
 npm install
 
-# 2. Build CDK
-npm run build
+# first-time bootstrap (per account/region)
+cdk bootstrap
 
-# 3. Deploy the stack
-cdk deploy
+# deploy all stacks
+cdk deploy --all
